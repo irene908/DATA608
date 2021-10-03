@@ -1,0 +1,149 @@
+---
+title: "R Notebook Homework 3"
+output:
+  html_document: default
+  html_notebook: default
+runtime: shiny
+---
+# Assignment 3
+
+## Goal
+
+I have provided you with data about mortality from all 50 states and the District of Columbia.Please access it at
+
+https://github.com/charleyferrari/CUNY_DATA608/tree/master/module3/data
+
+You are invited to gather more data from our provider, the CDC WONDER system, at
+
+https://wonder.cdc.gov 
+
+This assignment must be done in R. It must be done using the ‘shiny’ package.
+
+It is recommended you use an R package that supports interactive graphing such as plotly, or vegalite, but this is not required.
+
+Your apps must be deployed, I won’t be accepting raw files. Luckily, you can pretty easily deploy apps with a free account at shinyapps.io
+
+### Question 1
+
+As a researcher, you frequently compare mortality rates from particular causes across different States. You need a visualization that will let you see (for 2010 only) the crude mortality rate, across all States, from one cause (for example, Neoplasms, which are effectively cancers). Create a visualization that allows you to rank States by crude mortality for each cause of death.
+
+```{r}
+
+
+library(shiny)
+library(dplyr)
+suppressPackageStartupMessages(library(googleVis))
+
+mortality <- read.csv("https://raw.githubusercontent.com/charleyferrari/CUNY_DATA_608/master/module3/data/cleaned-cdc-mortality-1999-2010-2.csv")
+
+names(mortality)[1] <- c("Chapter")
+names(mortality)[6] <- c("Crude_Rate")
+
+
+rsconnect::setAccountInfo(name='irenershiny', token='3EAC6E8075C8C2EA19BA6CD3F0B9C2B4', 
+                          secret='VF6sr0LWU1bt9qdKGDu/6fVUqz41j1vxHF//mbEb')
+
+ui<-fluidPage(
+  
+  titlePanel("Statewise Mortality Rates by cause in 2010"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("Cause","Please select the Cause",
+                  choices=levels(as.factor(mortality$Chapter))
+      )
+    ),
+    
+    mainPanel(
+      htmlOutput("gvisplot")
+    )
+  )
+)
+server<-function(input, output) {
+  r <- reactive(mortality %>% 
+                   filter(Year == 2010, Chapter == input$Cause) %>% 
+                   select(State, "Crude_Rate") %>% 
+                   arrange(desc("Crude_Rate")))
+  
+  
+  output$gvisplot <- renderGvis({
+    gvisBarChart(r(), chartid = "2010CrudeRatesbyState",
+                 options = list(title = paste0("Mortality Rates by State in 2010:\n",
+                                               as.character(input$Cause)),
+                                vAxes = "[{textStyle:{fontSize: 10}}]",
+                                hAxes = "[{textStyle:{fontSize: 15}}]",
+                                height = 1200, width = 1200,
+                                chartArea = "{width: '75%', height: '90%'}",
+                                titleTextStyle="{fontSize:18}", legend = "none"))})
+}
+
+
+shinyApp(ui, server)
+
+```
+
+### Question 2
+
+Often you are asked whether particular States are improving their mortality rates (per cause) faster than, or slower than, the national average. Create a visualization that lets your clients see this for themselves for one cause of death at the time. Keep in mind that the national average should be weighted by the national population.
+
+```{r}
+
+library(shiny)
+library(dplyr)
+suppressPackageStartupMessages(library(googleVis))
+
+
+mortality <- read.csv("https://raw.githubusercontent.com/charleyferrari/CUNY_DATA_608/master/module3/data/cleaned-cdc-mortality-1999-2010-2.csv")
+
+names(mortality)[1] <- c("Chapter")
+names(mortality)[6] <- c("Crude_Rate")
+
+
+rsconnect::setAccountInfo(name='irenershiny', token='3EAC6E8075C8C2EA19BA6CD3F0B9C2B4', 
+                          secret='VF6sr0LWU1bt9qdKGDu/6fVUqz41j1vxHF//mbEb')
+
+ui<-fluidPage(
+  
+  titlePanel("Statewise Mortality Rates by cause in 2010"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("Cause","Please select the Cause",
+                  choices=levels(as.factor(mortality$Chapter))
+      )
+    ),
+    
+    mainPanel(
+      htmlOutput("gvisplot")
+    )
+  )
+)
+
+server<-function(input, output) {
+  r1 <- reactive(mortality %>% 
+                   filter(Chapter == input$Cause) %>%
+                   group_by(Year) %>% summarize(Crude_Rate = sum(Population * Crude_Rate) / sum(Population)))
+  
+  r2 <- reactive(r1() %>% 
+                   mutate(c = (Crude_Rate - Crude_Rate[Year == 1999]) / Crude_Rate[Year == 1999]) %>% 
+                   filter(Year == 2010) %>% select(c))
+  
+  r <- reactive(mortality %>% filter(Chapter == input$Cause) %>% 
+                  group_by(State) %>% select(State, Year, Crude_Rate) %>%
+                  mutate(c = (Crude_Rate - Crude_Rate[Year == 1999]) / Crude_Rate[Year == 1999]) %>% 
+                  filter(Year == 2010) %>% 
+                  mutate(x = c - r2()$'c') %>%
+                  select(State, x) %>% arrange(x))
+  
+  output$gvisplot <- renderGvis({
+    gvisBarChart(r(), chartid = "ChangeVsNational", 
+                 options = list(title = paste0("Mortality rates w.r.t. the national average ( ",
+                                               as.character(round(r2()$'c', 4))," )","\n",
+                                               as.character(input$Cause)),
+                                vAxes = "[{textStyle:{fontSize: 10}}]",
+                                hAxes = "[{textStyle:{fontSize: 15}}]",
+                                height = 1200, width = 1200,
+                                chartArea = "{width: '75%', height: '90%'}",
+                                titleTextStyle="{fontSize:18}", legend = "none"))})}
+
+shinyApp(ui, server)
+
+```
