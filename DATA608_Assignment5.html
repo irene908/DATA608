@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h1>DATA 608 Assignment 5 - Javascript</h1>
+
+<h3>1. Reverse a String: Enter a string</h3>
+
+Create a function to reverse any word that you type in. This can be typed into either an input box or an alert box, and then print the result in a box or on the webpage.
+
+<!-- form to read the string to reverse-->
+
+<p>
+<form name='revForm'>
+    <input type="text" size="14" name='raw'>
+    <input type="button" value="Reverse" onClick=rev_string()>
+</form>
+</p>
+
+<!-- display the reversed string-->
+<div id="rev_output"></div>
+
+<!-- 
+fn_rev reverses the string entered
+rev_string prints the reversed result 
+ -->
+<script type="text/javascript">
+function fn_rev(string){
+  var s = '';
+    s = string.split('').reverse().join('');
+    return s
+};
+
+function rev_string(){
+    var result = document.getElementById('rev_output');
+    result.innerHTML = fn_rev(document.revForm.raw.value);
+};
+</script>
+
+
+<h3>2. First 20 multiples</h3>
+
+Create a function that takes an input number, and prints a table with the first 20 multiples of the number, in order 5x4
+
+<!-- form to enter a number-->
+<p>
+<form name='multipleForm'>
+    <input type="number" name='raw2'>
+    <input type="button" value="Find Multiples" onClick=multiFn()>
+</form>
+</p>
+
+<!-- display the table of multiples-->
+<div id="m_output"></div>
+
+<!-- 
+multiples generates the multiples as an array
+printTable creates a table from the array of multiples
+multiFn prints the output table of multiples
+-->
+
+<script type="text/javascript">
+
+function multiples(x){
+    a = [];
+    for (i = 1; i <= x; i++) {a.push(document.multipleForm.raw2.value * (1 * i))};
+    return a
+}
+
+function printTable(inputArray){
+    var n = inputArray.length;
+    var tabOutput = '<table>';
+    for (i = 0; i < n; i++){
+        if (i % 4 ==0){tabOutput= tabOutput +'<tr>'};
+        tabOutput = tabOutput + '<td>'+ inputArray[i]+ '</td>';
+        if (i % 4 ==4-1){tabOutput = tabOutput +'</tr>'};
+    };
+    tabOutput = tabOutput + '</table>';
+    return tabOutput
+};
+
+function multiFn(){
+  var result = document.getElementById('m_output');
+  result.innerHTML = printTable(multiples(20));
+};
+</script>
+
+</body>
+</html>
